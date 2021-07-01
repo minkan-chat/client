@@ -1,0 +1,13 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2018"
+authors = [
+    "Erik1000 <erik1000@protonmail.com>",
+    "cloudybyte <hi@cloudybyte.net>",
+    "okrplay <32576280+okrplay@users.noreply.github.com>"
+]
+license = "AGPL-3.0-or-later"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
