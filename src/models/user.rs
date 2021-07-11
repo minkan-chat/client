@@ -8,33 +8,32 @@ use sha2::Sha256;
 #[cfg(test)]
 mod tests {
     use super::*;
+    
+    const USERNAME: &str = "erik";
+    const PASSWORD: &str = "qwerty";
+
     #[test]
     fn test_master_key_derviation() {
-        let password = "qwerty";
         let expected = base64::decode("66Nn+bGSnk0QkWtd3vEiLLzrhiCm3SFkurcpcm+L8GA=").unwrap();
-        let got = derive_master_key("erik", &password);
+        let got = derive_master_key("erik", &PASSWORD);
         assert_eq!(expected, got);
     }
 
     #[test]
     fn test_master_password_hash_derviation() {
-        let username = "erik";
-        let password = "qwerty";
         let expected = base64::decode("FJ05kkc74dniHi2kzbBMFMD6gfkoIR7PdcLCYc7iUK0=").unwrap();
         let got = derive_master_password_hash(
-            &username,
-            &password,
-            &derive_master_key(&username, &password),
+            &USERNAME,
+            &PASSWORD,
+            &derive_master_key(&USERNAME, &PASSWORD),
         );
         assert_eq!(expected, got);
     }
 
     #[test]
     fn test_stretched_master_key_derviation() {
-        let username = "erik";
-        let password = "qwerty";
         let expected = base64::decode("fwNcXC46Kssud1nN3ManWAeN5L0990ZVPZZ/BHdun+sTJvwf7bZF6eb37hwk1bYS3gLGPqUkzFQK63o5soQ9sw==").unwrap();
-        let got = derive_stretched_master_key(&derive_master_key(&username, &password));
+        let got = derive_stretched_master_key(&derive_master_key(&USERNAME, &PASSWORD));
         assert_eq!(expected, got);
     }
 }
