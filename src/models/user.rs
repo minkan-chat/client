@@ -1,9 +1,10 @@
 use hkdf::Hkdf;
 use hmac::Hmac;
 use log::debug;
-use sequoia_openpgp::cert;
+use sequoia_openpgp::{cert, crypto, types::KeyFlags};
 use sha2::Sha256;
 
+use super::errors;
 
 #[cfg(test)]
 mod tests {
@@ -38,7 +39,9 @@ mod tests {
     }
 }
 /// Represents an authenticated [`User`]
+#[derive(Debug)]
 pub struct User {
+    _priv: (),
     /// The name of the user
     pub username: String,
     /// The pgp key of the user
@@ -46,8 +49,19 @@ pub struct User {
 }
 
 /// This struct is used to represent an unauthenticated [`User`]
+#[derive(Debug)]
 pub struct UnauthenticatedUser {
+    _priv: (),
     pub username: String,
+}
+
+/// This struct is used during registration of a new [`User`].
+#[derive(Debug)]
+pub struct UnregisteredUser {
+    _priv: (),
+    pub username: String,
+    pub password: String,
+    pub cert: cert::Cert,
 }
 
 /// Uses hkdf to construct the stretched master key. Derivation is done by generating two hkdfs with different info paramters.
@@ -98,18 +112,71 @@ fn derive_master_password_hash(username: &str, password: &str, master_key: &[u8;
 }
 
 impl UnauthenticatedUser {
-    /// Returns the acutal [`User`]
-    pub fn authenticate(&self, password: String)  {
+    /// Returns the acutal [`User`] if successful or an [`Error`][`super::errors::AuthenticationError`]
+    pub fn authenticate(&self, password: String) -> Result<User, errors::AuthenticationError> {
         let master_key = derive_master_key(&self.username, &password);
         let _master_password_hash =
             derive_master_password_hash(&self.username, &password, &master_key);
         let _stretched_master_key = derive_stretched_master_key(&master_key);
+        Err(errors::AuthenticationError::NoConnection)
     }
 }
 
+impl UnregisteredUser {
+    /// Returns the registered [`User`] or an [`Error`][`super::errors::RegistrationError`]
+    pub fn register(&self) -> Result<User, errors::RegistrationError> {
+        // TODO: talk to the server
+        Ok(User {
+            _priv: (),
+            cert: self.cert.clone(),
+            username: self.username.clone(),
+        })
+    }
+}
 impl User {
-    /// returns an [`UnauthenticatedUser`]
-    pub fn new(username: String) -> UnauthenticatedUser {
-        UnauthenticatedUser { username }
+    /// Returns an [`UnauthenticatedUser`].
+    pub fn new(username: &str) -> UnauthenticatedUser {
+        UnauthenticatedUser {
+            _priv: (),
+            username: username.to_string(),
+        }
+    }
+
+    /// Returns an [`UnregisteredUser`].
+    /// This function is used to abstract key generation. 
+    /// To complete the registration and send the keys to the server, call [`UnregisteredUser::register`].
+    pub fn create(username: &str, password: &str) -> UnregisteredUser {
+        // Discare the revocation certificate because as we won't lose the key as long as the user does not forget their password.
+        // In this case, it would make sense to store a revocation certificate, but because we would need to store it encrypted with the user's password, it doesn't make sense.
+        // If we won't store it unprotected, because such a revocation certificate could be used in an attack too, e.g. by destroying the trust other users have to the user.
+        let (cert, _) = cert::CertBuilder::new()
+            // For now, the userid in the key is just the username
+            .add_userid(username)
+            // We are using cv 25519 as the key algorithm because we want to be compliant to the Signal and MLS standard for the identity key.
+            // Curve 25519 is supported by many pgp implementations (e.g. gnupg) and will be in the next pgp standard.
+            // The idea is to use this as the long term identity key as per https://signal.org/docs/specifications/x3dh/#keys (IK_A and IK_B).
+            .set_cipher_suite(cert::CipherSuite::Cv25519)
+            // The primary key is only used for certification (C)
+            .set_primary_key_flags(KeyFlags::empty().set_certification())
+            // validity and cipher suite are all equal to the one of the primary key (CV2519)
+            // The first subkey is used for signing (S)
+            .add_subkey(KeyFlags::empty().set_signing(), None, None)
+            // The second key is used for encryption (E)
+            .add_subkey(KeyFlags::empty().set_storage_encryption().set_transport_encryption(), None, None)
+            // The third key is used for authentication (A)
+            .add_subkey(KeyFlags::empty().set_authentication(), None, None)
+            // we provide the stretched master key as the password for the pgp key.
+            .set_password(Some(crypto::Password::from(
+                &derive_stretched_master_key(&derive_master_key(&username, &password))[..],
+            )))
+            .generate()
+            .expect("Failed to generate pgp key.");
+        debug!("PGP key fingerprint: {}", cert.fingerprint());
+        UnregisteredUser {
+            _priv: (),
+            username: username.to_string(),
+            password: password.to_string(),
+            cert,
+        }
     }
 }

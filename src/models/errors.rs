@@ -7,3 +7,11 @@ pub enum AuthenticationError {
     #[error("The server did not accept the password sent.")]
     InvalidPassword,
 }
+
+#[derive(Error, Debug)]
+pub enum RegistrationError {
+    #[error("Failed to connect to the registration server.")]
+    NoConnection,
+    #[error("Username is unavailable.")]
+    UsernameUnavailable,
+}
