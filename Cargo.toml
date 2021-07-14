@@ -1,11 +1,10 @@
 [package]
-name = "azuma_client"
+name = "minkan-client"
 version = "0.1.0"
 edition = "2018"
 authors = [
-    "Erik1000 <erik1000@protonmail.com>",
+    "Erik Tesar <erik@erik-tesar.com>"
     "cloudybyte <hi@cloudybyte.net>",
-    "okrplay <32576280+okrplay@users.noreply.github.com>"
 ]
 license = "AGPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,7 +20,7 @@ pbkdf2 = "0.8"
 hkdf = "0.11"
 sha2 = "0.9.5"
 hmac = "0.11.0"
-sqlx = { version = "0.5", default-features = false, features = ["runtime-async-std-native-tls","sqlite"]}
+sqlx = { version = "0.5.5", features = ["runtime-async-std-native-tls","sqlite"]}
 directories-next = "2"
 toml = "0.5"
 uuid = { version = "0.8", features = ["serde", "v4"] }
