@@ -5,6 +5,7 @@ use sequoia_openpgp::{cert, crypto, types::KeyFlags};
 use sha2::Sha256;
 
 use super::errors;
+use uuid;
 
 #[cfg(test)]
 mod tests {
@@ -42,12 +43,15 @@ mod tests {
 #[derive(Debug)]
 pub struct User {
     _priv: (),
-    /// The name of the user
+    /// The name of the 
     pub username: String,
     /// The pgp key of the user
+    pub uuid: uuid::Uuid,
     pub cert: cert::Cert,
 }
-
+struct _Cert {
+    
+}
 /// This struct is used to represent an unauthenticated [`User`]
 #[derive(Debug)]
 pub struct UnauthenticatedUser {
@@ -118,6 +122,7 @@ impl UnauthenticatedUser {
         let _master_password_hash =
             derive_master_password_hash(&self.username, &password, &master_key);
         let _stretched_master_key = derive_stretched_master_key(&master_key);
+        // TODO: talk to the server
         Err(errors::AuthenticationError::NoConnection)
     }
 }
@@ -126,11 +131,7 @@ impl UnregisteredUser {
     /// Returns the registered [`User`] or an [`Error`][`super::errors::RegistrationError`]
     pub fn register(&self) -> Result<User, errors::RegistrationError> {
         // TODO: talk to the server
-        Ok(User {
-            _priv: (),
-            cert: self.cert.clone(),
-            username: self.username.clone(),
-        })
+        Err(super::errors::RegistrationError::NoConnection)
     }
 }
 impl User {
