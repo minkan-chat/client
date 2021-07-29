@@ -1,5 +1,5 @@
-use minkan_client::models::User;
 use clap::Clap;
+use minkan_client::models::User;
 // use directories_next::ProjectDirs;
 // use log::{debug, warn};
 use rpassword;
@@ -68,7 +68,6 @@ fn return_value_or_ask(value: Option<String>, message: Option<&str>, secret: boo
         }
     })
 }
-
 
 #[async_std::main]
 async fn main() {

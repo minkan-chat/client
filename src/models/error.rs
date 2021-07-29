@@ -15,3 +15,13 @@ pub enum RegistrationError {
     #[error("Username is unavailable.")]
     UsernameUnavailable,
 }
+
+#[derive(Error, Debug, Clone)]
+pub enum KeyError {
+    #[error("Invalid key password")]
+    InvalidKeyPassword,
+    #[error("The key has an invalid algorithm")]
+    InvalidKeyAlgo,
+    #[error("There is no such key")]
+    NoSuchKey,
+}
