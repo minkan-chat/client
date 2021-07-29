@@ -1,10 +1,7 @@
-use std::io::Write;
-
 use hkdf::Hkdf;
 use hmac::Hmac;
 use log::debug;
 use sequoia_openpgp::{
-    armor::{Kind, Writer},
     cert,
     crypto::{KeyPair, Password},
     policy::StandardPolicy,
@@ -274,11 +271,11 @@ impl User {
             .generate()
             .unwrap();
         //.expect("Failed to generate pgp key.");
-        debug!("PGP key fingerprint: {}", cert.fingerprint());
-        let mut writer = Writer::new(Vec::new(), Kind::SecretKey).unwrap();
-        writer.write_all(&cert.as_tsk().to_vec().unwrap()).unwrap();
-        let buf = writer.finalize().unwrap();
-        println!("{}", String::from_utf8_lossy(&buf));
+        debug!(
+            "PGP public key for {}:\n{}",
+            cert.fingerprint(),
+            String::from_utf8_lossy(&cert.armored().to_vec().unwrap())
+        );
         UnregisteredUser {
             _priv: (),
             username: username.to_string(),
