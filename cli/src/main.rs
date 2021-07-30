@@ -1,5 +1,5 @@
 use clap::Clap;
-use minkan_client::models::User;
+use minkan_client::models::{User};
 // use directories_next::ProjectDirs;
 // use log::{debug, warn};
 use rpassword;
@@ -7,6 +7,8 @@ use rpassword;
 use std::io::{self, Write};
 // use std::{fs, path};
 // use serde::Deserialize;
+
+pub mod user_query;
 
 /// The cli of the minkan client
 #[derive(Clap)]
@@ -72,7 +74,8 @@ fn return_value_or_ask(value: Option<String>, message: Option<&str>, secret: boo
 #[async_std::main]
 async fn main() {
     env_logger::init();
-
+    use user_query;
+    user_query::find_user_by_name(user_query::find_user_by_name::Variables { name: Some("ee".to_string())}).await.unwrap();
     let opts: Opts = Opts::parse();
 
     // Match the given subcommand.

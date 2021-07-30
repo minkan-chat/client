@@ -1,0 +1,16 @@
+scalar Binary
+type MutationRoot {
+	signup(username: String!): User!
+}
+type QueryRoot {
+	user(username: String!): User!
+}
+type User {
+	id: ID!
+	name: String!
+	cert: Binary!
+}
+schema {
+	query: QueryRoot
+	mutation: MutationRoot
+}

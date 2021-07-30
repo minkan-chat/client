@@ -11,3 +11,8 @@ env_logger = "0.8.4"
 rpassword = "5.0"
 async-std = { version = "1.6", features = [ "attributes" ] }
 minkan-client = { path = "../client" }
+graphql_client = { version = "0.10", features = ["reqwest-blocking"] }
+serde = { version = "1.0.126", features = ["derive"] }
+bytes = { version = "1.0.1", features = ["serde"] }
+reqwest = "0.11.4"
+serde_cbor = "0.10"
