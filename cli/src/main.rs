@@ -1,12 +1,6 @@
 use clap::Clap;
 use minkan_client::models::User;
-// use directories_next::ProjectDirs;
-// use log::{debug, warn};
-use rpassword;
-// use toml;
 use std::io::{self, Write};
-// use std::{fs, path};
-// use serde::Deserialize;
 
 pub mod user_query;
 
@@ -93,7 +87,7 @@ async fn main() {
             // Check if the user has provided a password as command line argument or else ask them to type one now.
             let password =
                 return_value_or_ask(login.password, Some("Please type your password: "), true);
-            User::new(&username).authenticate(password).unwrap();
+            User::login(&username).authenticate(password).unwrap();
         }
         SubCommand::Register(register) => {
             let username = return_value_or_ask(

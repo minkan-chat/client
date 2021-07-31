@@ -134,8 +134,8 @@ mod tests {
 }
 /// Represents an authenticated [`User`]
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct User {
-    _priv: (),
     /// The name of the
     pub username: String,
     /// the unique id of the user
@@ -146,15 +146,15 @@ pub struct User {
 
 /// This struct is used to represent an unauthenticated [`User`]
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct UnauthenticatedUser {
-    _priv: (),
     pub username: String,
 }
 
 /// This struct is used during registration of a new [`User`].
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct UnregisteredUser {
-    _priv: (),
     pub username: String,
     pub password: String,
     pub cert: cert::Cert,
@@ -202,7 +202,7 @@ fn derive_master_password_hash(username: &str, password: &str, master_key: &[u8;
     let rounds = 1;
     let mut result = [0u8; 32];
     debug!("Generating master password hash for {}...", &username);
-    pbkdf2::pbkdf2::<Hmac<Sha256>>(master_key, &password.as_bytes(), rounds, &mut result);
+    pbkdf2::pbkdf2::<Hmac<Sha256>>(master_key, password.as_bytes(), rounds, &mut result);
     debug!("Done generating master password hash for {}", &username);
     result
 }
@@ -228,9 +228,8 @@ impl UnregisteredUser {
 }
 impl User {
     /// Returns an [`UnauthenticatedUser`].
-    pub fn new(username: &str) -> UnauthenticatedUser {
+    pub fn login(username: &str) -> UnauthenticatedUser {
         UnauthenticatedUser {
-            _priv: (),
             username: username.to_string(),
         }
     }
@@ -266,7 +265,7 @@ impl User {
             .add_subkey(KeyFlags::empty().set_authentication(), None, None)
             // we provide the stretched master key as the password for the pgp key.
             .set_password(Some(Password::from(
-                &derive_stretched_master_key(&derive_master_key(&username, &password))[..],
+                &derive_stretched_master_key(&derive_master_key(username, password))[..],
             )))
             .generate()
             .unwrap();
@@ -277,7 +276,6 @@ impl User {
             String::from_utf8_lossy(&cert.armored().to_vec().unwrap())
         );
         UnregisteredUser {
-            _priv: (),
             username: username.to_string(),
             password: password.to_string(),
             cert,
@@ -339,8 +337,8 @@ impl User {
     /// we need the password (and the username, but that is stored in the [`User`] struct itself)
     pub fn get_signing_subkey(&self, password: &str) -> Result<KeyPair, error::KeyError> {
         let stretched_master_key =
-            &derive_stretched_master_key(&derive_master_key(&self.username, &password));
-        self.get_subkey_by_keyflag(&stretched_master_key, KeyFlags::empty().set_signing())
+            &derive_stretched_master_key(&derive_master_key(&self.username, password));
+        self.get_subkey_by_keyflag(stretched_master_key, KeyFlags::empty().set_signing())
     }
 
     /// A helper function to get the unencrypted encryption subkey of a [`User`]
@@ -348,9 +346,9 @@ impl User {
     /// we need the password (and the username, but that is stored in the [`User`] struct itself)
     pub fn get_encryption_subkey(&self, password: &str) -> Result<KeyPair, error::KeyError> {
         let stretched_master_key =
-            &derive_stretched_master_key(&derive_master_key(&self.username, &password));
+            &derive_stretched_master_key(&derive_master_key(&self.username, password));
         self.get_subkey_by_keyflag(
-            &stretched_master_key,
+            stretched_master_key,
             KeyFlags::empty()
                 .set_storage_encryption()
                 .set_transport_encryption(),
@@ -362,11 +360,8 @@ impl User {
     /// we need the password (and the username, but that is stored in the [`User`] struct itself)
     pub fn get_authentication_subkey(&self, password: &str) -> Result<KeyPair, error::KeyError> {
         let stretched_master_key =
-            &derive_stretched_master_key(&derive_master_key(&self.username, &password)); // derive stretched master key from master key which is derived from the password
-        self.get_subkey_by_keyflag(
-            &stretched_master_key,
-            KeyFlags::empty().set_authentication(),
-        )
+            &derive_stretched_master_key(&derive_master_key(&self.username, password)); // derive stretched master key from master key which is derived from the password
+        self.get_subkey_by_keyflag(stretched_master_key, KeyFlags::empty().set_authentication())
     }
 
     /// Takes the user's password to derive the stretched master secret from and then re-encrypts the certificate with ``export_password``.
