@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: prepare
+      run: sudo apt install clang llvm pkg-config nettle-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
