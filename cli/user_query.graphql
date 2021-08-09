@@ -1,6 +1,0 @@
-query FindUserByName($name: String) {
-    user(username: $name) {
-        id
-        cert
-    }
-}
