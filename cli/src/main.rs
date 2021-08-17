@@ -63,7 +63,7 @@ fn return_value_or_ask(value: Option<String>, message: Option<&str>, secret: boo
     })
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() {
     env_logger::init();
     let opts: Opts = Opts::parse();
@@ -89,11 +89,12 @@ async fn main() {
             );
             let password =
                 return_value_or_ask(register.password, Some("Please type your password: "), true);
-            let user = User::create(&username, &password);
-            println!(
-                "The fingerprint of your pgp key is {}",
-                user.cert.fingerprint()
-            );
+            let user = User::create(&username, &password)
+                .await
+                .register()
+                .await
+                .unwrap();
+            println!("Your uuid: {}", user.uuid);
         }
     }
 }

@@ -1,15 +1,21 @@
+use std::str::FromStr;
+
+use graphql_client::GraphQLQuery;
 use hkdf::Hkdf;
 use hmac::Hmac;
 use log::debug;
 use sequoia_openpgp::{
     cert,
     crypto::{KeyPair, Password},
+    packet::prelude::SignatureBuilder,
     policy::StandardPolicy,
     serialize::MarshalInto,
-    types::KeyFlags,
+    types::{KeyFlags, SignatureType},
     Packet,
 };
 use sha2::Sha256;
+
+use crate::graphql::{mutations, perform_query, queries};
 
 use super::error;
 use uuid;
@@ -23,89 +29,6 @@ mod tests {
 
     const USERNAME: &str = "erik";
     const PASSWORD: &str = "qwerty";
-    /* NOTE: not needed yet
-        const UUID: &str = "f76d463c-c4f5-43b5-a26e-f28549e52519";
-        const CERT_ARMOR: &str = "\
-    -----BEGIN PGP PRIVATE KEY BLOCK-----
-
-    lFgEYPG7rBYJKwYBBAHaRw8BAQdA5o2m68brKVAIRDk8t3ZP6wqzOsxsIifuBrKE
-    aFlAo9EAAQCh7deEwMDTz62dQCq+MQ5dnSmV97oBFYiLpJRwNsjaCBDXiMsEHxYK
-    AH0FgmDxu6wDCwkHCRDprp7KaSUdP0cUAAAAAAAeACBzYWx0QG5vdGF0aW9ucy5z
-    ZXF1b2lhLXBncC5vcmckalvvhB4zXsMZPhhkx9ShucvzAtb/E44GEddpjT2tCQMV
-    CggCmwECHgEWIQTlYUzT6rmmCx258iHprp7KaSUdPwAAXWkA/iv8eiWTfp8Zk4Zn
-    RBYnumfPDPYD2qyRmYLJzmJiBta6AQC3wSKLRk5/L7jN7OGcCWPEOhdLsQWCugS5
-    NjchAGMFDbQEZXJpa4jOBBMWCgCABYJg8busAwsJBwkQ6a6eymklHT9HFAAAAAAA
-    HgAgc2FsdEBub3RhdGlvbnMuc2VxdW9pYS1wZ3Aub3JnAc8wZ0vQH8rp44FLIoqu
-    nYo1CQtq+70jtlhcKmypdoQDFQoIApkBApsBAh4BFiEE5WFM0+q5pgsdufIh6a6e
-    ymklHT8AAMu+AP4wdplkpHvNc5BHwSrKGNFfWqsRie3myn5ssigJsqKSPwD9Ei/P
-    4gYjts9yVii49ElZaYBQA6Kaglzwfas4NtmNGw2cWARg8busFgkrBgEEAdpHDwEB
-    B0CXyVuVdSRizHmAAzBeb4PyoQ2oO65BWaWSNVsdSNbDJAAA/1O53tcez/uBtoiu
-    Yr3bJMd1ElHSeY9Pwf0Wn67Q6utmFCeJAX8EGBYKATEFgmDxu6wJEOmunsppJR0/
-    RxQAAAAAAB4AIHNhbHRAbm90YXRpb25zLnNlcXVvaWEtcGdwLm9yZ/1i2Q+rbclN
-    yrcNJW+1IPzVFmeFp0cgq3ZsPyanWaZIApsCvqAEGRYKAG8FgmDxu6wJEG16kJt4
-    v/9ORxQAAAAAAB4AIHNhbHRAbm90YXRpb25zLnNlcXVvaWEtcGdwLm9yZzXa/B6O
-    EjfRoK7KK+W0s74xXhjUaebJxv5Bsk5r1viFFiEEiVDeil6oK+3Y4oJwbXqQm3i/
-    /04AAAKwAP44hDPVSFbNQ1qGoGn/N2C2rARaGpruPqg6XLNf+/UN5wEA2ZmtD070
-    GeKjCvP44lWfMgR+RmGb5wmmiy0soq1GnwwWIQTlYUzT6rmmCx258iHprp7KaSUd
-    PwAAR4YA/jcHKz3LYQioM99yp7cJ+TqF0SP5hxC/KZM6kDQspEugAQC69+X2wJKu
-    +EGMWS6csMN9T8uXhAvGMu6M1R82A1fEC5xYBGDxu6wWCSsGAQQB2kcPAQEHQMmF
-    uXs3NRLsyhyIFn40d3HHOSTwDVTonw28mG5I/iyaAAEA/S9e/FGZ9H5iUksJlhaH
-    H83WcAaaD65pGmD3wHUOX30OpojABBgWCgByBYJg8busCRDprp7KaSUdP0cUAAAA
-    AAAeACBzYWx0QG5vdGF0aW9ucy5zZXF1b2lhLXBncC5vcmf1pu4krkTC1AkJT2EI
-    5sE/VBY6TWWsGvTdrAxs6dbazQKbIBYhBOVhTNPquaYLHbnyIemunsppJR0/AABX
-    1wEA3HLYga8PIHmWbiNKOtUS0aS7k0gx3fpNsf9KOKtD5yoBAL+MdqCh43M8p2bv
-    kwbBINVQdND1p3+2hZza9LztNkgNnF0EYPG7rBIKKwYBBAGXVQEFAQEHQFuL5863
-    TiVuSLriyo69eqT5/wA/mi9OeyIOlv864sh+AwEICQAA/1BI5ybhHcAU4yBIaog0
-    0uph5q9UVIxorRSiPojNU944EJSIwAQYFgoAcgWCYPG7rAkQ6a6eymklHT9HFAAA
-    AAAAHgAgc2FsdEBub3RhdGlvbnMuc2VxdW9pYS1wZ3Aub3JnrxWcFJ7iD8JTe9U+
-    /e2TZvd/geFu5AgYQtUB51VDMlYCmwwWIQTlYUzT6rmmCx258iHprp7KaSUdPwAA
-    nZwA/jptUcNuWqKMAyDg3XS1K/J2iO6ahqTV2lX4szbtRfO3AQCzA/1VJaFH7hR1
-    1pEo/1jN0d6U56iU+YRjiBVtnnHfDw==
-    =YKSy
-    -----END PGP PRIVATE KEY BLOCK-----
-    ";
-        const ENCRYPTED_CERT_ARMOR: &str = "\
-    -----BEGIN PGP PRIVATE KEY BLOCK-----
-    xYYEYPG7rBYJKwYBBAHaRw8BAQdA5o2m68brKVAIRDk8t3ZP6wqzOsxsIifuBrKE
-    aFlAo9H+CQMIXSONEFrEUbv/+G/1YosmWZqkY9wuwMcmEelIcjBUf/rY2YMymKF4
-    znc21yMO5ZCahjubz/HGSQWKrvtZe4vUna7DEC9bwrKlCOba5hXRcsLACwQfFgoA
-    fQWCYPG7rAMLCQcJEOmunsppJR0/RxQAAAAAAB4AIHNhbHRAbm90YXRpb25zLnNl
-    cXVvaWEtcGdwLm9yZyRqW++EHjNewxk+GGTH1KG5y/MC1v8TjgYR12mNPa0JAxUK
-    CAKbAQIeARYhBOVhTNPquaYLHbnyIemunsppJR0/AABdaQD+K/x6JZN+nxmThmdE
-    Fie6Z88M9gParJGZgsnOYmIG1roBALfBIotGTn8vuM3s4ZwJY8Q6F0uxBYK6BLk2
-    NyEAYwUNzQRlcmlrwsAOBBMWCgCABYJg8busAwsJBwkQ6a6eymklHT9HFAAAAAAA
-    HgAgc2FsdEBub3RhdGlvbnMuc2VxdW9pYS1wZ3Aub3JnAc8wZ0vQH8rp44FLIoqu
-    nYo1CQtq+70jtlhcKmypdoQDFQoIApkBApsBAh4BFiEE5WFM0+q5pgsdufIh6a6e
-    ymklHT8AAMu+AP4wdplkpHvNc5BHwSrKGNFfWqsRie3myn5ssigJsqKSPwD9Ei/P
-    4gYjts9yVii49ElZaYBQA6Kaglzwfas4NtmNGw3HhgRg8busFgkrBgEEAdpHDwEB
-    B0CXyVuVdSRizHmAAzBeb4PyoQ2oO65BWaWSNVsdSNbDJP4JAwjRvr6Zmpv6mf9a
-    iGlbnWUDPPFYgEWRX27iKmF5i2M3v8AiL71fodQGO20sz4SNZWqxH8676YwH1eS0
-    /figOMJCG3KKWd1TLviVRGFuSo2JwsC/BBgWCgExBYJg8busCRDprp7KaSUdP0cU
-    AAAAAAAeACBzYWx0QG5vdGF0aW9ucy5zZXF1b2lhLXBncC5vcmf9YtkPq23JTcq3
-    DSVvtSD81RZnhadHIKt2bD8mp1mmSAKbAr6gBBkWCgBvBYJg8busCRBtepCbeL//
-    TkcUAAAAAAAeACBzYWx0QG5vdGF0aW9ucy5zZXF1b2lhLXBncC5vcmc12vwejhI3
-    0aCuyivltLO+MV4Y1Gnmycb+QbJOa9b4hRYhBIlQ3opeqCvt2OKCcG16kJt4v/9O
-    AAACsAD+OIQz1UhWzUNahqBp/zdgtqwEWhqa7j6oOlyzX/v1DecBANmZrQ9O9Bni
-    owrz+OJVnzIEfkZhm+cJpostLKKtRp8MFiEE5WFM0+q5pgsdufIh6a6eymklHT8A
-    AEeGAP43Bys9y2EIqDPfcqe3Cfk6hdEj+YcQvymTOpA0LKRLoAEAuvfl9sCSrvhB
-    jFkunLDDfU/Ll4QLxjLujNUfNgNXxAvHhgRg8busFgkrBgEEAdpHDwEBB0DJhbl7
-    NzUS7MociBZ+NHdxxzkk8A1U6J8NvJhuSP4smv4JAwj9Y+h6VejaSP8K5Xq2XSZa
-    hGg+kjs4sc2H3/cnOkTS3yxsw06yMUCsAOZw22+Ri1nhn3z+tlHxPeLpUgcjQOZZ
-    a89myd7uGe44q7AYTZdUwsAABBgWCgByBYJg8busCRDprp7KaSUdP0cUAAAAAAAe
-    ACBzYWx0QG5vdGF0aW9ucy5zZXF1b2lhLXBncC5vcmf1pu4krkTC1AkJT2EI5sE/
-    VBY6TWWsGvTdrAxs6dbazQKbIBYhBOVhTNPquaYLHbnyIemunsppJR0/AABX1wEA
-    3HLYga8PIHmWbiNKOtUS0aS7k0gx3fpNsf9KOKtD5yoBAL+MdqCh43M8p2bvkwbB
-    INVQdND1p3+2hZza9LztNkgNx4sEYPG7rBIKKwYBBAGXVQEFAQEHQFuL5863TiVu
-    SLriyo69eqT5/wA/mi9OeyIOlv864sh+AwEICf4JAwhxugeBHT9uI/9rrYNDLlBt
-    xcDZ1FTQhiEEU6bqRYzWdkfqnDSpdjp91wclQBxUE+4PMBQ+0k68g0dnDDZ1rgZn
-    kZwVZj6qwXbnlOeWTa0gwsAABBgWCgByBYJg8busCRDprp7KaSUdP0cUAAAAAAAe
-    ACBzYWx0QG5vdGF0aW9ucy5zZXF1b2lhLXBncC5vcmevFZwUnuIPwlN71T797ZNm
-    93+B4W7kCBhC1QHnVUMyVgKbDBYhBOVhTNPquaYLHbnyIemunsppJR0/AACdnAD+
-    Om1Rw25aoowDIODddLUr8naI7pqGpNXaVfizNu1F87cBALMD/VUloUfuFHXWkSj/
-    WM3R3pTnqJT5hGOIFW2ecd8P
-    =78LK
-    -----END PGP PRIVATE KEY BLOCK-----";
-    */
 
     #[test]
     fn test_master_key_derviation() {
@@ -157,6 +80,8 @@ pub struct UnauthenticatedUser {
 pub struct UnregisteredUser {
     pub username: String,
     pub password: String,
+    master_password_hash: [u8; 32],
+    stretched_master_key: [u8; 64],
     pub cert: cert::Cert,
 }
 
@@ -221,9 +146,49 @@ impl UnauthenticatedUser {
 
 impl UnregisteredUser {
     /// Returns the registered [`User`] or an [`Error`][`super::error::RegistrationError`]
-    pub fn register(&self) -> Result<User, error::RegistrationError> {
-        // TODO: talk to the server
-        Err(super::error::RegistrationError::NoConnection)
+    pub async fn register(self) -> Result<User, error::RegistrationError> {
+        let challenge = perform_query::<queries::GetChallenge>(queries::GetChallenge::build_query(
+            queries::get_challenge::Variables,
+        ))
+        .await
+        .data
+        .unwrap()
+        .get_challenge;
+        let mut signer = self
+            .cert
+            .primary_key()
+            .key()
+            .clone()
+            .parts_into_secret()
+            .unwrap()
+            .decrypt_secret(&Password::from(&self.stretched_master_key[..]))
+            .unwrap()
+            .into_keypair()
+            .unwrap();
+        let sig = SignatureBuilder::new(SignatureType::Text)
+            .sign_message(&mut signer, &challenge)
+            .unwrap();
+        let query_body = mutations::signup::Variables {
+            user: Some(mutations::signup::SignupUserInput {
+                name: self.username.clone(),
+                hash: self.master_password_hash.to_vec().into(),
+                certificate: self.cert.as_tsk().to_vec().unwrap().into(),
+                challenge,
+                signature: sig.to_vec().unwrap().into(),
+            }),
+        };
+        let query_body = mutations::Signup::build_query(query_body);
+        let response = perform_query::<mutations::Signup>(query_body).await;
+
+        if let Some(data) = response.data.unwrap().signup.user {
+            Ok(User {
+                cert: self.cert.clone(),
+                username: self.username,
+                uuid: uuid::Uuid::from_str(&data.id).unwrap(),
+            })
+        } else {
+            Err(super::error::RegistrationError::NoConnection)
+        }
     }
 }
 impl User {
@@ -237,7 +202,11 @@ impl User {
     /// Returns an [`UnregisteredUser`].
     /// This function is used to abstract key generation.
     /// To complete the registration and send the keys to the server, call [`UnregisteredUser::register`].
-    pub fn create(username: &str, password: &str) -> UnregisteredUser {
+    pub async fn create(username: &str, password: &str) -> UnregisteredUser {
+        let master_key = derive_master_key(username, password);
+        let stretched_master_key = derive_stretched_master_key(&master_key);
+        let master_password_hash = derive_master_password_hash(username, password, &master_key);
+
         // Discare the revocation certificate because as we won't lose the key as long as the user does not forget their password.
         // In this case, it would make sense to store a revocation certificate, but because we would need to store it encrypted with the user's password, it doesn't make sense.
         // If we won't store it unprotected, because such a revocation certificate could be used in an attack too, e.g. by destroying the trust other users have to the user.
@@ -264,9 +233,7 @@ impl User {
             // The third key is used for authentication (A)
             .add_subkey(KeyFlags::empty().set_authentication(), None, None)
             // we provide the stretched master key as the password for the pgp key.
-            .set_password(Some(Password::from(
-                &derive_stretched_master_key(&derive_master_key(username, password))[..],
-            )))
+            .set_password(Some(Password::from(&stretched_master_key[..])))
             .generate()
             .unwrap();
         //.expect("Failed to generate pgp key.");
@@ -279,6 +246,8 @@ impl User {
             username: username.to_string(),
             password: password.to_string(),
             cert,
+            master_password_hash,
+            stretched_master_key,
         }
     }
 

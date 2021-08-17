@@ -1,0 +1,222 @@
+# Directs the executor to query only when the field exists.
+directive @ifdef on FIELD
+
+# Represents an Actor.
+interface Actor {
+  # The unique identify (UUID) of the Actor as defined in RFC 4122
+  id: ID!
+
+  # The certificate of the Actor without secret parts.
+  certificate: PublicCertificate!
+
+  # The name of the Actor as an utf-8 string
+  name: String!
+}
+
+# Used for the response after a successful authentication
+type AuthenticatedUser {
+  id: ID!
+  name: String!
+
+  # Since the client needs the secret parts of the PGP Certificate, the server sends them to the client for decryption
+  certificate: PrivateCertificate!
+  token: TokenPair!
+}
+
+# Used for the login credentials
+input AuthenticationCredentialsUserInput {
+  # The name of the user used to login
+  name: String!
+
+  # the master password hash derived from the master password
+  hash: Bytes!
+}
+
+# All errors that can occur during authentication/login
+union AuthenticationError =
+    UnknownUser
+  | InvalidMasterPasswordHash
+  | UserSuspended
+
+type AuthenticationResult {
+  user: AuthenticatedUser
+
+  # The errors that may have occured. If there were no errors, it is empty ([]) NOT null
+  errors: [AuthenticationError!]!
+}
+
+# A custom scalar that encodes Bytes
+scalar Bytes
+
+# Represents a PGP Certificate
+interface Certificate {
+  # The long-form fingerprint of the Certificate as a hex string
+  fingerprint: String!
+
+  # The whole certificate as bytes
+  content: Bytes!
+}
+
+# Another user's certificate has the same fingerprint.
+# This error is normally almost impossible but can happen if the client tries to use the same certificate twice.
+type CertificateTaken implements Error {
+  description: String!
+}
+
+# An ISO-601 encoded UTC date string
+scalar DateTime
+
+# Generic error type used for typed errors
+interface Error {
+  description: String!
+}
+
+# The token is expired. The client can check this before making the request
+# by looking at the ``exp`` field in the claims
+type ExpiredRefreshToken implements Error {
+  description: String!
+}
+
+# The certificate malformed or something similar
+type InvalidCertificate implements Error {
+  description: String!
+}
+
+type InvalidChallenge implements Error {
+  description: String!
+}
+
+# The master password hash derived from the master password is invalid
+type InvalidMasterPasswordHash implements Error {
+  description: String!
+}
+
+# The token is malformed or invalid
+type InvalidRefreshToken implements Error {
+  description: String!
+}
+
+# The certification of the server's PGP Certificate is invalid
+type InvalidSignature implements Error {
+  description: String!
+}
+
+# If a username containts invalid characters (only letters and numbers are allowed) or is too long.
+type InvalidUsername implements Error {
+  description: String!
+}
+
+# The mutation root
+type Mutation {
+  # The clients sends a SignupUserInput to the server with all information
+  signup(user: SignupUserInput!): SignupResult!
+
+  # The clients sends a AuthenticationCredentialsUserInput
+  authenticate(
+    credentials: AuthenticationCredentialsUserInput!
+  ): AuthenticationResult!
+  refreshToken(refreshToken: String!): RefreshTokenResult!
+}
+
+# Represents a Certificate with encrypted secret parts
+type PrivateCertificate implements Certificate {
+  fingerprint: String!
+
+  # The encrypted Certificate. In order for the secret parts to be used, the stretched master key is needed.
+  content: Bytes!
+}
+
+# Represents a Certificate without secret parts
+type PublicCertificate implements Certificate {
+  fingerprint: String!
+  content: Bytes!
+}
+
+# The query root
+type Query {
+  # returns an Actor by its id or null if there's no such Actor
+  actorById(id: ID!): Actor
+
+  # returns an Actor by its name
+  actorByName(name: String!): Actor
+
+  # Returns a challenge which is used to proof that the user has the control over the primary key on login
+  getChallenge: String!
+}
+
+union RefreshTokenError = InvalidRefreshToken | ExpiredRefreshToken
+
+type RefreshTokenResult {
+  token: TokenPair
+  errors: [RefreshTokenError!]!
+}
+
+# All error that can occur during signup
+union SignupError =
+    UsernameUnavailable
+  | InvalidUsername
+  | CertificateTaken
+  | InvalidCertificate
+  | InvalidSignature
+  | InvalidChallenge
+
+# Used to have typed error types
+type SignupResult {
+  # The generated User for the client to get its id. If there is an error, it should be null
+  user: AuthenticatedUser
+
+  # The errors that may have occured. If there were no errors, it is empty ([]) NOT null
+  errors: [SignupError!]!
+}
+
+# The information the server needs for the signup process
+input SignupUserInput {
+  # The name the user wants to use for login etc. If not set, the first identity of the PGP Certificate is used.
+  name: String!
+
+  # The master password hash derived from the master password
+  hash: Bytes!
+
+  # The PGP Certificate WITH encrypted secret parts generated by the client
+  certificate: Bytes!
+
+  # A random challenge obtained by calling the getChallenge query signed by the primary key of the Certificate.
+  # Used to proof that the client has the control over the Certificate's primary key and therefore the whole Certificate.
+  challenge: String!
+  signature: Bytes!
+}
+
+# Containts the current access token and the refresh token for the next token pair.
+# Both are Json Web Tokens
+type TokenPair {
+  accessToken: String!
+  refreshToken: String!
+}
+
+# The username is unknown
+type UnknownUser implements Error {
+  description: String!
+}
+
+# A normal user
+type User implements Actor {
+  id: ID!
+  certificate: PublicCertificate!
+  name: String!
+}
+
+# The user is suspended
+type UserSuspended implements Error {
+  description: String!
+
+  # the date the user got suspended
+  since: DateTime
+
+  # the reason for the suspension
+  reason: String
+}
+
+# The username is already taken or unavailable for other reasons
+type UsernameUnavailable implements Error {
+  description: String!
+}
