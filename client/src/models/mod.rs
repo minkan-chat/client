@@ -1,4 +1,13 @@
 pub mod error;
 pub mod user;
+use serde::{Deserialize, Serialize};
 pub use user::User;
-pub mod scalars;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TokenPair {
+    /// Used for authentication
+    access_token: String,
+    /// Used to get a new token pair after the access token has expried
+    refresh_token: String,
+}

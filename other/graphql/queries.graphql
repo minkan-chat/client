@@ -1,3 +1,0 @@
-query GetChallenge { 
-  getChallenge
-}

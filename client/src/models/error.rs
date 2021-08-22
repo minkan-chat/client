@@ -1,19 +1,43 @@
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AuthenticationError {
+    #[error("{0}")]
+    UnknownUser(String),
+    #[error("{0}")]
+    InvalidMasterPasswordHash(String),
+    #[error("description")]
+    UserSuspended {
+        description: String,
+        /// The date and time since the user is suspended in utc
+        since: DateTime<Utc>,
+        /// The reason for the suspension
+        reason: String,
+    },
     #[error("Failed to connect to the authentication server.")]
     NoConnection,
-    #[error("The server did not accept the password sent.")]
-    InvalidPassword,
 }
 
-#[derive(Error, Debug)]
-pub enum RegistrationError {
+#[derive(Error, Debug, Deserialize)]
+#[serde(tag = "__typename")]
+pub enum SignupError {
+    #[error("{description}")]
+    UsernameUnavailable { description: String },
+    #[error("{description}")]
+    InvalidUsername { description: String },
+    #[error("{description}")]
+    CertificateTaken { description: String },
+    #[error("{description}")]
+    InvalidCertificate { description: String },
+    #[error("{description}")]
+    InvalidSignature { description: String },
+    #[error("{description}")]
+    InvalidChallenge { description: String },
     #[error("Failed to connect to the registration server.")]
+    #[serde(skip)]
     NoConnection,
-    #[error("Username is unavailable.")]
-    UsernameUnavailable,
 }
 
 #[derive(Error, Debug, Clone)]

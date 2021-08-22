@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use bytes::Bytes;
 
 use graphql_client::GraphQLQuery;
 use hkdf::Hkdf;
@@ -8,17 +8,22 @@ use sequoia_openpgp::{
     cert,
     crypto::{KeyPair, Password},
     packet::prelude::SignatureBuilder,
+    parse::Parse,
     policy::StandardPolicy,
     serialize::MarshalInto,
     types::{KeyFlags, SignatureType},
     Packet,
 };
+use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use crate::graphql::{mutations, perform_query, queries};
+use crate::graphql::{
+    mutations::{Signup, SignupUserInput},
+    perform_query,
+    queries::GetChallenge,
+};
 
-use super::error;
-use uuid;
+use super::{error, TokenPair};
 
 const STANDARD_POLICY: &StandardPolicy = &StandardPolicy::new();
 
@@ -56,15 +61,67 @@ mod tests {
     }
 }
 /// Represents an authenticated [`User`]
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[non_exhaustive]
 pub struct User {
-    /// The name of the
+    /// The (login) name of the user
+    #[serde(rename = "name")]
     pub username: String,
     /// the unique id of the user
-    pub uuid: uuid::Uuid,
+    #[serde(rename = "id")]
+    // FIXME: use uuid crate on the server side so this can be deserialized with cbor without pain.
+    // Currently, it expects a bytearray but since the scalar ID of async_graphql is ID(String) instead of ID(uuid)
+    // it always gets a string. This works with serde_json but not with serde_cbor
+    pub uuid: String,
     /// The pgp key of the user
+    #[serde(
+        rename = "certificate",
+        serialize_with = "serialize_cert",
+        deserialize_with = "deserialize_cert"
+    )]
     cert: cert::Cert,
+    /// The token pair used for authentication
+    token: TokenPair,
+}
+
+/// Serializes the public parts of a [``sequoia_openpgp::cert::Cert``]
+fn serialize_cert<S>(cert: &cert::Cert, ser: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    ser.serialize_bytes(
+        &cert
+            .to_vec()
+            .map_err(<S::Error as serde::ser::Error>::custom)?,
+    )
+}
+
+/// Serializes the public AND private parts of a [``sequoia_openpgp::cert::Cert``]
+fn serialize_cert_secret<S>(cert: &cert::Cert, ser: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::ser::Serializer,
+{
+    ser.serialize_bytes(
+        &cert
+            .as_tsk()
+            .to_vec()
+            .map_err(<S::Error as serde::ser::Error>::custom)?,
+    )
+}
+
+/// Deserializes a [``sequoia_openpgp::cert::Cert``] and includes secret parts if present
+fn deserialize_cert<'de, D>(de: D) -> Result<cert::Cert, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    #[derive(Debug, Deserialize)]
+    #[serde(rename = "certificate")]
+    struct Repr {
+        content: Bytes,
+    }
+    let repr = Repr::deserialize(de)?;
+
+    cert::Cert::from_bytes(&repr.content).map_err(<D::Error as serde::de::Error>::custom)
 }
 
 /// This struct is used to represent an unauthenticated [`User`]
@@ -75,14 +132,17 @@ pub struct UnauthenticatedUser {
 }
 
 /// This struct is used during registration of a new [`User`].
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 #[non_exhaustive]
 pub struct UnregisteredUser {
+    #[serde(rename = "name")]
     pub username: String,
-    pub password: String,
+    #[serde(rename = "hash")]
     master_password_hash: [u8; 32],
-    stretched_master_key: [u8; 64],
+    #[serde(serialize_with = "serialize_cert_secret", rename = "certificate")]
     pub cert: cert::Cert,
+    challenge: String,
+    signature: Bytes,
 }
 
 /// Uses hkdf to construct the stretched master key. Derivation is done by generating two hkdfs with different info paramters.
@@ -145,50 +205,14 @@ impl UnauthenticatedUser {
 }
 
 impl UnregisteredUser {
-    /// Returns the registered [`User`] or an [`Error`][`super::error::RegistrationError`]
-    pub async fn register(self) -> Result<User, error::RegistrationError> {
-        let challenge = perform_query::<queries::GetChallenge>(queries::GetChallenge::build_query(
-            queries::get_challenge::Variables,
-        ))
-        .await
-        .data
-        .unwrap()
-        .get_challenge;
-        let mut signer = self
-            .cert
-            .primary_key()
-            .key()
-            .clone()
-            .parts_into_secret()
-            .unwrap()
-            .decrypt_secret(&Password::from(&self.stretched_master_key[..]))
-            .unwrap()
-            .into_keypair()
-            .unwrap();
-        let sig = SignatureBuilder::new(SignatureType::Text)
-            .sign_message(&mut signer, &challenge)
-            .unwrap();
-        let query_body = mutations::signup::Variables {
-            user: Some(mutations::signup::SignupUserInput {
-                name: self.username.clone(),
-                hash: self.master_password_hash.to_vec().into(),
-                certificate: self.cert.as_tsk().to_vec().unwrap().into(),
-                challenge,
-                signature: sig.to_vec().unwrap().into(),
-            }),
-        };
-        let query_body = mutations::Signup::build_query(query_body);
-        let response = perform_query::<mutations::Signup>(query_body).await;
-
-        if let Some(data) = response.data.unwrap().signup.user {
-            Ok(User {
-                cert: self.cert.clone(),
-                username: self.username,
-                uuid: uuid::Uuid::from_str(&data.id).unwrap(),
-            })
-        } else {
-            Err(super::error::RegistrationError::NoConnection)
-        }
+    /// Returns the registered [`User`] or a [`Vec<super::error::SignupError>`]
+    pub async fn register(self) -> Result<User, Vec<error::SignupError>> {
+        perform_query::<Signup>(Signup::build_query(SignupUserInput { user: self }))
+            .await
+            .map_err(|_| vec![super::error::SignupError::NoConnection])?
+            .data
+            .expect("The provided query is invalid")
+            .result
     }
 }
 impl User {
@@ -202,7 +226,8 @@ impl User {
     /// Returns an [`UnregisteredUser`].
     /// This function is used to abstract key generation.
     /// To complete the registration and send the keys to the server, call [`UnregisteredUser::register`].
-    pub async fn create(username: &str, password: &str) -> UnregisteredUser {
+    pub async fn create(username: &str, password: &str) -> anyhow::Result<UnregisteredUser> {
+        // TODO: spawn extra thread so the non-async crypto stuff won't block everything
         let master_key = derive_master_key(username, password);
         let stretched_master_key = derive_stretched_master_key(&master_key);
         let master_password_hash = derive_master_password_hash(username, password, &master_key);
@@ -234,20 +259,40 @@ impl User {
             .add_subkey(KeyFlags::empty().set_authentication(), None, None)
             // we provide the stretched master key as the password for the pgp key.
             .set_password(Some(Password::from(&stretched_master_key[..])))
-            .generate()
-            .unwrap();
+            .generate()?;
         //.expect("Failed to generate pgp key.");
         debug!(
             "PGP public key for {}:\n{}",
             cert.fingerprint(),
             String::from_utf8_lossy(&cert.armored().to_vec().unwrap())
         );
-        UnregisteredUser {
-            username: username.to_string(),
-            password: password.to_string(),
-            cert,
-            master_password_hash,
-            stretched_master_key,
+
+        if let Some(data) = perform_query::<GetChallenge>(GetChallenge::build_query(()))
+            .await?
+            .data
+        {
+            debug!("Challenge from server: {}", data.challenge);
+
+            let mut signer = cert
+                .primary_key()
+                .key()
+                .clone()
+                .parts_into_secret()?
+                .decrypt_secret(&Password::from(&stretched_master_key[..]))?
+                .into_keypair()?;
+            let sig = SignatureBuilder::new(SignatureType::Text)
+                .sign_message(&mut signer, &data.challenge)?
+                .to_vec()?;
+
+            Ok(UnregisteredUser {
+                username: username.into(),
+                master_password_hash,
+                cert,
+                challenge: data.challenge,
+                signature: sig.into(),
+            })
+        } else {
+            Err(anyhow::anyhow!("Failed to get challenge from server."))
         }
     }
 

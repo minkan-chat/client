@@ -1,0 +1,21 @@
+mutation signup($user: SignupUserInput) {
+  signup(user: $user) {
+    user {
+      id
+      name
+      certificate {
+        content
+      }
+      token {
+        accessToken
+        refreshToken
+      }
+    }
+    errors {
+      ... on Error {
+        __typename
+        description
+      }
+    }
+  }
+}
