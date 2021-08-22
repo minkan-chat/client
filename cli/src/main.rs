@@ -91,9 +91,10 @@ async fn main() {
                 return_value_or_ask(register.password, Some("Please type your password: "), true);
             let user = User::create(&username, &password)
                 .await
+                .expect("Registration preflight failed")
                 .register()
                 .await
-                .unwrap();
+                .expect("Registration failed");
             println!("Your uuid: {}", user.uuid);
         }
     }
