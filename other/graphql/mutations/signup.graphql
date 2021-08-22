@@ -1,4 +1,4 @@
-mutation signup($user: SignupUserInput) {
+mutation signup($user: SignupUserInput!) {
   signup(user: $user) {
     user {
       id
