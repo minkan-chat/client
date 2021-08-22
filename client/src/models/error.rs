@@ -2,21 +2,23 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Deserialize)]
+#[serde(tag = "__typename")]
 pub enum AuthenticationError {
-    #[error("{0}")]
-    UnknownUser(String),
-    #[error("{0}")]
-    InvalidMasterPasswordHash(String),
-    #[error("description")]
+    #[error("{description}")]
+    UnknownUser { description: String },
+    #[error("{description}")]
+    InvalidMasterPasswordHash { description: String },
+    #[error("{description}")]
     UserSuspended {
         description: String,
         /// The date and time since the user is suspended in utc
-        since: DateTime<Utc>,
+        since: Option<DateTime<Utc>>,
         /// The reason for the suspension
-        reason: String,
+        reason: Option<String>,
     },
     #[error("Failed to connect to the authentication server.")]
+    #[serde(skip)]
     NoConnection,
 }
 

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::graphql::{
-    mutations::{Signup, SignupUserInput},
+    mutations::{Authenticate, AuthenticationCredentialsUserInput, Signup, SignupUserInput},
     perform_query,
     queries::GetChallenge,
 };
@@ -125,10 +125,15 @@ where
 }
 
 /// This struct is used to represent an unauthenticated [`User`]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 #[non_exhaustive]
 pub struct UnauthenticatedUser {
+    #[serde(rename = "name")]
     pub username: String,
+    #[serde(rename = "hash")]
+    master_password_hash: [u8; 32],
+    #[serde(skip)]
+    stretched_master_key: [u8; 64],
 }
 
 /// This struct is used during registration of a new [`User`].
@@ -194,13 +199,15 @@ fn derive_master_password_hash(username: &str, password: &str, master_key: &[u8;
 
 impl UnauthenticatedUser {
     /// Returns the acutal [`User`] if successful or an [`Error`][`super::error::AuthenticationError`]
-    pub fn authenticate(&self, password: String) -> Result<User, error::AuthenticationError> {
-        let master_key = derive_master_key(&self.username, &password);
-        let _master_password_hash =
-            derive_master_password_hash(&self.username, &password, &master_key);
-        let _stretched_master_key = derive_stretched_master_key(&master_key);
-        // TODO: talk to the server
-        Err(error::AuthenticationError::NoConnection)
+    pub async fn authenticate(self) -> Result<User, Vec<error::AuthenticationError>> {
+        perform_query::<Authenticate>(Authenticate::build_query(
+            AuthenticationCredentialsUserInput { credentials: self },
+        ))
+        .await
+        .map_err(|_| vec![super::error::AuthenticationError::NoConnection])?
+        .data
+        .expect("The provided query is invalid")
+        .result
     }
 }
 
@@ -217,9 +224,15 @@ impl UnregisteredUser {
 }
 impl User {
     /// Returns an [`UnauthenticatedUser`].
-    pub fn login(username: &str) -> UnauthenticatedUser {
+    pub fn login(username: &str, password: &str) -> UnauthenticatedUser {
+        let master_key = derive_master_key(username, password);
+        let master_password_hash = derive_master_password_hash(username, password, &master_key);
+        let stretched_master_key = derive_stretched_master_key(&master_key);
+
         UnauthenticatedUser {
             username: username.to_string(),
+            master_password_hash,
+            stretched_master_key,
         }
     }
 

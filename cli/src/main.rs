@@ -79,7 +79,10 @@ async fn main() {
             // Check if the user has provided a password as command line argument or else ask them to type one now.
             let password =
                 return_value_or_ask(login.password, Some("Please type your password: "), true);
-            User::login(&username).authenticate(password).unwrap();
+            User::login(&username, &password)
+                .authenticate()
+                .await
+                .unwrap();
         }
         SubCommand::Register(register) => {
             let username = return_value_or_ask(
