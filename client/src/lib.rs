@@ -1,4 +1,4 @@
-pub(crate) mod graphql;
+pub mod graphql;
 pub mod models;
 
 #[doc(hidden)]

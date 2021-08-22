@@ -1,7 +1,7 @@
 use graphql_client::{GraphQLQuery, QueryBody, Response};
 
-pub(crate) mod mutations;
-pub(crate) mod queries;
+pub mod mutations;
+pub mod queries;
 
 use lazy_static::lazy_static;
 use reqwest::{Body, Client, ClientBuilder};
@@ -58,18 +58,24 @@ pub(crate) async fn perform_query<T: GraphQLQuery>(
 ///
 /// where ``AuthenticatedUser`` holds the ``user`` in the response and ``Vec<SignupError>`` a (this)error enum:
 /// ```rust
+/// # use minkan_client::deserializable_result_type;
+/// # use minkan_client::models::User as AuthenticatedUser;
+/// # use minkan_client::models::error::SignupError;
+/// # use serde::Serialize;
+/// # use minkan_client::models::user::UnregisteredUser;
+/// # use graphql_client::{GraphQLQuery, QueryBody};
+///
 /// deserializable_result_type! {
 ///     #[derive(Debug)],
 ///     pub struct Signup {
-///         pub result: std::result::Result<AuthenticatedUser, Vec<SignupError>>,
+///         pub result: Result<AuthenticatedUser, Vec<SignupError>>,
 ///     },
 ///     "signup", // this is the same as the operation_name in the GraphQLQuery trait implementation
 ///     user,
 /// }
-/// ```
 ///
-/// You can then implement or derive the [``graphql_client::GraphQLQuery``] on the generated ``Signup`` struct for serialization:
-/// ```rust
+/// // You can then implement or derive the [``graphql_client::GraphQLQuery``] on the generated ``Signup`` struct for serialization:
+///
 /// #[derive(Serialize)]
 /// pub struct SignupUserInput {
 ///     pub user: UnregisteredUser,
