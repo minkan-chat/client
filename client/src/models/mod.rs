@@ -5,7 +5,7 @@ pub use user::User;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TokenPair {
+pub struct TokenPair {
     /// Used for authentication
     access_token: String,
     /// Used to get a new token pair after the access token has expried

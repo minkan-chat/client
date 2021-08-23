@@ -18,7 +18,7 @@ hkdf = "0.11"
 sha2 = "0.9.5"
 hmac = "0.11.0"
 uuid = { version = "0.8", features = ["serde", "v4"] }
-graphql_client = { version = "0.10.0", default_features = false, features = ["graphql_query_derive", "reqwest"] }
+graphql_client = { version = "0.10.0", default_features = false, features = [] }
 serde = { version = "1", features = ["derive"]}
 bytes = { version = "1", default_features = false, features = ["serde"]}
 serde_cbor = "0.11.2"
@@ -26,7 +26,6 @@ lazy_static = "1.4.0"
 reqwest = "0.11.4"
 chrono = { version = "0.4.19", features = ["serde"] }
 anyhow = "1.0.43"
-serde_json = "*"
 
 [dev-dependencies]
 base64 = "0.13"

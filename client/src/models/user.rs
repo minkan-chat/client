@@ -79,9 +79,9 @@ pub struct User {
         serialize_with = "serialize_cert",
         deserialize_with = "deserialize_cert"
     )]
-    cert: cert::Cert,
+    pub cert: cert::Cert,
     /// The token pair used for authentication
-    token: TokenPair,
+    pub token: TokenPair,
 }
 
 /// Serializes the public parts of a [``sequoia_openpgp::cert::Cert``]
@@ -153,7 +153,7 @@ pub struct UnregisteredUser {
 /// Uses hkdf to construct the stretched master key. Derivation is done by generating two hkdfs with different info paramters.
 /// Our refernce implementation [bitwarden](https://bitwarden.com/help/article/bitwarden-security-white-paper/#overview-of-the-master-password-hashing-key-derivation-and-encryption-process) does this (we don't know exactly why) and so do we.
 /// It should definitively not decrease security.
-fn derive_stretched_master_key(master_key: &[u8; 32]) -> [u8; 64] {
+pub fn derive_stretched_master_key(master_key: &[u8; 32]) -> [u8; 64] {
     let mut okm = [0u8; 64];
 
     // divide `okm` into two parts so we can use two different info values.
@@ -172,7 +172,7 @@ fn derive_stretched_master_key(master_key: &[u8; 32]) -> [u8; 64] {
 }
 
 /// Uses pbkdf2_sha256(password: password, salt: username, rounds: 100_000)
-fn derive_master_key(username: &str, password: &str) -> [u8; 32] {
+pub fn derive_master_key(username: &str, password: &str) -> [u8; 32] {
     let rounds = 100_000;
     let mut result = [0u8; 32];
     debug!("Generating master key for {}...", username);
@@ -188,7 +188,11 @@ fn derive_master_key(username: &str, password: &str) -> [u8; 32] {
 
 /// Uses the generated master key to further derive a hash using pbkdf2_sha256(password: master_key, salt: password, rounds: 1)
 /// The resulting hash is sent to the server for authentication
-fn derive_master_password_hash(username: &str, password: &str, master_key: &[u8; 32]) -> [u8; 32] {
+pub fn derive_master_password_hash(
+    username: &str,
+    password: &str,
+    master_key: &[u8; 32],
+) -> [u8; 32] {
     let rounds = 1;
     let mut result = [0u8; 32];
     debug!("Generating master password hash for {}...", &username);
@@ -390,40 +394,40 @@ impl User {
             &derive_stretched_master_key(&derive_master_key(&self.username, password)); // derive stretched master key from master key which is derived from the password
         self.get_subkey_by_keyflag(stretched_master_key, KeyFlags::empty().set_authentication())
     }
+}
 
-    /// Takes the user's password to derive the stretched master secret from and then re-encrypts the certificate with ``export_password``.
-    /// The ``export_password`` can be typed in any other pgp program (e.g. gnupg).
-    pub fn export_cert(
-        &self,
-        password: &str,
-        export_password: &str,
-    ) -> Result<cert::Cert, error::KeyError> {
-        let password = &Password::from(
-            &derive_stretched_master_key(&derive_master_key(&self.username, password))[..],
-        );
-        // this will be the password the user can use to decrypt the key in any other pgp application (e.g. gnupg)
-        let export_password = &Password::from(export_password);
+/// Takes the user's password to derive the stretched master secret from and then re-encrypts the certificate with ``export_password``.
+/// The ``export_password`` can be typed in any other pgp program (e.g. gnupg).
+pub fn export_cert(
+    cert: &cert::Cert,
+    username: &str,
+    password: &str,
+    export_password: &str,
+) -> Result<cert::Cert, error::KeyError> {
+    let password =
+        &Password::from(&derive_stretched_master_key(&derive_master_key(username, password))[..]);
+    // this will be the password the user can use to decrypt the key in any other pgp application (e.g. gnupg)
+    let export_password = &Password::from(export_password);
 
-        // a Vec of all key packets which will then be inserted into the certificate. The other keys will be replaced automatically.
-        let keys = std::iter::once(self.cert.primary_key().key().clone())
-            // map over the primary key (C)
-            .map(|key| {
-                let key = key.parts_into_secret()?;
-                // decrypt the key
-                let key = key.decrypt_secret(password)?;
-                // encrypt it again
-                Ok(Packet::from(key.encrypt_secret(export_password)?))
-            })
-            // chain the single interator of the primary togehter with all subkeys
-            .chain(self.cert.keys().subkeys().map(|key| {
-                let key = key.key().clone().parts_into_secret()?;
-                let key = key.decrypt_secret(password)?;
-                Ok(Packet::from(key.encrypt_secret(export_password)?))
-            }))
-            .collect::<sequoia_openpgp::Result<Vec<_>>>();
-        match keys {
-            Ok(keys) => Ok(self.cert.clone().insert_packets(keys).unwrap()),
-            Err(_) => Err(error::KeyError::InvalidKeyPassword),
-        }
+    // a Vec of all key packets which will then be inserted into the certificate. The other keys will be replaced automatically.
+    let keys = std::iter::once(cert.primary_key().key().clone())
+        // map over the primary key (C)
+        .map(|key| {
+            let key = key.parts_into_secret()?;
+            // decrypt the key
+            let key = key.decrypt_secret(password)?;
+            // encrypt it again
+            Ok(Packet::from(key.encrypt_secret(export_password)?))
+        })
+        // chain the single interator of the primary togehter with all subkeys
+        .chain(cert.keys().subkeys().map(|key| {
+            let key = key.key().clone().parts_into_secret()?;
+            let key = key.decrypt_secret(password)?;
+            Ok(Packet::from(key.encrypt_secret(export_password)?))
+        }))
+        .collect::<sequoia_openpgp::Result<Vec<_>>>();
+    match keys {
+        Ok(keys) => Ok(cert.clone().insert_packets(keys).unwrap()),
+        Err(_) => Err(error::KeyError::InvalidKeyPassword),
     }
 }
