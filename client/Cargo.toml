@@ -29,3 +29,12 @@ anyhow = "1.0.43"
 
 [dev-dependencies]
 base64 = "0.13"
+
+[features]
+# This is a workaround for https://github.com/rust-lang/cargo/issues/1197
+# On windows disable default features when building and enable the "win" feature
+# We won't need this anymore if Cargo supports target feature flags or we have
+# a full rust crypto backend (no c/c++ dependencies).
+default = ["unix"]
+win = ["sequoia-openpgp/crypto-cng"]
+unix = ["sequoia-openpgp/crypto-nettle"]
