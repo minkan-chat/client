@@ -11,18 +11,9 @@ clap = "3.0.0-beta.2"
 env_logger = "0.8.4"
 rpassword = "5.0"
 tokio = { version = "1.10.0", features = ["full"] }
-minkan-client = { path = "../client" }
+minkan-client = { path = "../client", default_features = false }
 graphql_client = { version = "0.10", features = ["reqwest-blocking"] }
 serde = { version = "1.0.126", features = ["derive"] }
 bytes = { version = "1.0.1", features = ["serde"] }
 reqwest = "0.11.4"
 serde_cbor = "0.10"
-
-[features]
-# This is a workaround for https://github.com/rust-lang/cargo/issues/1197
-# On windows disable default features when building and enable the "win" feature
-# We won't need this anymore if Cargo supports target feature flags or we have
-# a full rust crypto backend (no c/c++ dependencies).
-default = ["unix"]
-win = ["minkan-client/win"]
-unix = ["minkan-client/unix"]

@@ -30,6 +30,8 @@ jobs:
       run: |
         if [ ${{matrix.os}} = "windows-latest" ] ; then
           echo "FEATURE_FLAGS=--no-default-features --features=win" >> $GITHUB_ENV
+        else
+          echo "FEATURE_FLAGS=--no-default-features --features=unix" >> $GITHUB_ENV
         fi
     - name: Install dependencies for Ubuntu
       run: sudo apt install -y clang llvm pkg-config nettle-dev
@@ -70,6 +72,8 @@ jobs:
       run: |
         if [ ${{matrix.os}} = "windows-latest" ] ; then
           echo "FEATURE_FLAGS=--no-default-features --features=win" >> $GITHUB_ENV
+        else
+          echo "FEATURE_FLAGS=--no-default-features --features=unix" >> $GITHUB_ENV
         fi
     - uses: actions/checkout@v2
     - name: Install dependencies for Ubuntu
@@ -109,8 +113,11 @@ jobs:
     - name: Set crypto-backend 
       shell: bash
       run: |
+      # https://github.com/rust-lang/cargo/issues/5015 differs from minkan-chat/server
         if [ ${{matrix.os}} = "windows-latest" ] ; then
           echo "FEATURE_FLAGS=--no-default-features --features=win" >> $GITHUB_ENV
+        else
+          echo "FEATURE_FLAGS=--no-default-features --features=unix" >> $GITHUB_ENV
         fi
     - uses: actions/checkout@v2
     - name: Install dependencies for Ubuntu
