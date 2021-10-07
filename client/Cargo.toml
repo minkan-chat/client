@@ -1,0 +1,16 @@
+[package]
+name = "minkan-client"
+version = "0.1.0"
+edition = "2018"
+authors = [
+    "Erik Tesar <erik@erik-tesar.com>"
+]
+license = "AGPL-3.0-or-later"
+keywords = ["openpgp", "encryption", "e2ee"]
+categories = []
+
+readme = "README.md"
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
