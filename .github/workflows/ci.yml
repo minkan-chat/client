@@ -2,7 +2,7 @@ name: Rust CI
 
 on:
   push:
-    branches: [main, staging, trying]
+    branches: [main, staging, trying, wasm_ci]
   pull_request:
     branches:
       - '**'
@@ -100,6 +100,24 @@ jobs:
       with:
         command: build
         args: --verbose --release ${{ env.FEATURE_FLAGS }}
+
+
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - uses: actions/checkout@v2
+      - name: "Add target to rustc"
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: "Build WASM"
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      
   test:
     strategy:
       matrix:
