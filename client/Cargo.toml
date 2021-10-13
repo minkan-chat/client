@@ -3,38 +3,30 @@ name = "minkan-client"
 version = "0.1.0"
 edition = "2018"
 authors = [
-    "Erik Tesar <erik@erik-tesar.com>",
-    "cloudybyte <hi@cloudybyte.net>",
+    "Erik Tesar <erik@erik-tesar.com>"
 ]
 license = "AGPL-3.0-or-later"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+keywords = ["openpgp", "encryption", "e2ee"]
+categories = []
+
+readme = "README.md"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-log = "0.4.14"
-sequoia-openpgp = { version = "1.3.0", default_features = false }
-thiserror = "1.0"
-pbkdf2 = "0.8"
-hkdf = "0.11"
-sha2 = "0.9.5"
-hmac = "0.11.0"
-uuid = { version = "0.8", features = ["serde", "v4"] }
-graphql_client = { version = "0.10.0", default_features = false, features = [] }
-serde = { version = "1", features = ["derive"]}
-bytes = { version = "1", default_features = false, features = ["serde"]}
-serde_cbor = "0.11.2"
-lazy_static = "1.4.0"
-reqwest = "0.11.4"
-chrono = { version = "0.4.19", features = ["serde"] }
-anyhow = "1.0.43"
+reqwest = { version = "0.11.5"}
+async-trait = "0.1.51"
+thiserror = "1.0.29"
+anyhow = "1.0.44"
+serde = { version = "1.0.130", features = ["derive"]}
+url = "2.2.2"
+async-stream = "0.3.2"
+futures = "0.3"
+directories = "4.0.1"
 
-[dev-dependencies]
-base64 = "0.13"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls"]}
 
-[features]
-# This is a workaround for https://github.com/rust-lang/cargo/issues/1197
-# On windows disable default features when building and enable the "win" feature
-# We won't need this anymore if Cargo supports target feature flags or we have
-# a full rust crypto backend (no c/c++ dependencies).
-default = ["unix"]
-win = ["sequoia-openpgp/crypto-cng"]
-unix = ["sequoia-openpgp/crypto-nettle"]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3.55"
+web-sys = { version = "0.3.55", features = ["Window", "IdbFactory" , "IdbOpenDbRequest"] }
