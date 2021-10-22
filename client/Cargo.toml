@@ -1,7 +1,7 @@
 [package]
 name = "minkan-client"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 authors = [
     "Erik Tesar <erik@erik-tesar.com>"
 ]
@@ -22,7 +22,10 @@ serde = { version = "1.0.130", features = ["derive"]}
 url = "2.2.2"
 async-stream = "0.3.2"
 futures = "0.3"
-directories = "4.0.1"
+
+[dev-dependencies]
+# used to test async code
+tokio-test = "0.4.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls"]}
