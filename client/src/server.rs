@@ -83,8 +83,8 @@ impl Server {
         &self.api_endpoint
     }
 
-    /// Returns the nickname user-defined nickname of a [`Server`].
-    /// Nicknames can help a user to identify a [`Server`] easier.
+    /// Returns the user-defined nickname of a [`Server`].
+    /// Nicknames can help an user to identify a [`Server`] easier.
     ///
     /// # Example
     ///
