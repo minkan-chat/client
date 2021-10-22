@@ -6,6 +6,7 @@
 pub mod database;
 pub(crate) mod seal;
 
+pub mod actor;
 mod application;
 mod error;
 

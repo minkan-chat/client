@@ -22,6 +22,14 @@ serde = { version = "1.0.130", features = ["derive"]}
 url = "2.2.2"
 async-stream = "0.3.2"
 futures = "0.3"
+downcast-rs = "1.2.0"
+typetag = "0.1.7"
+sequoia-openpgp = { version = "1.5.0", default-features = false, features = [
+    "crypto-rust",
+    "allow-experimental-crypto",
+    "allow-variable-time-crypto",
+    "compression"
+]}
 
 [dev-dependencies]
 # used to test async code
