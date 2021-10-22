@@ -28,7 +28,7 @@ futures = "0.3"
 tokio-test = "0.4.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls"]}
+sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls", "offline"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3.55"
