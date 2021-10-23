@@ -8,11 +8,18 @@ pub(crate) mod seal;
 
 pub mod actor;
 mod application;
-mod error;
+pub mod error;
 
+mod node;
 pub mod server;
+mod util;
 
 #[doc(inline)]
 pub use application::Application;
 #[doc(inline)]
 pub use error::{Error, Result};
+#[doc(inline)]
+pub use node::Node;
+
+#[doc(inline)]
+pub(crate) use util::*;

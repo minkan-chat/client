@@ -30,6 +30,8 @@ sequoia-openpgp = { version = "1.5.0", default-features = false, features = [
     "allow-variable-time-crypto",
     "compression"
 ]}
+uuid = { version = "0.8.2", features = ["serde"] }
+bytes = { version = "1.1.0", features = ["serde"] }
 
 [dev-dependencies]
 # used to test async code
