@@ -8,7 +8,8 @@ use futures::{Stream, TryStreamExt};
 
 #[async_trait]
 impl Insert for Server {
-    async fn insert(&self) -> Result<()> {
+    type Parent = Application;
+    async fn insert(&self, app: &Self::Parent) -> Result<()> {
         let endpoint = self.api_endpoint.as_str();
         sqlx::query!(
             r#"
@@ -18,7 +19,7 @@ impl Insert for Server {
             endpoint,
             self.nickname,
         )
-        .execute(self.app.pool())
+        .execute(app.pool())
         .await
         // TODO: map to correct error
         .map_err(|_| Error::DatabaseError(DatabaseError::Other))?;
@@ -40,7 +41,7 @@ impl Get for Server {
         )
         .fetch(app.pool())
         .map_ok(move |record| {
-            Server::from_values(record.endpoint, record.nickname, app.clone())
+            Server::from_values(record.endpoint, record.nickname)
                 .expect("invalid server in database")
         })
         // TODO: map to correct error
@@ -61,8 +62,7 @@ impl Get for Server {
         // TODO: map to correct error
         .map_err(|_| Error::DatabaseError(DatabaseError::Other))?
         .map(|record| {
-            Self::from_values(record.endpoint, record.nickname, parent.clone())
-                .expect("invalid server in database")
+            Self::from_values(record.endpoint, record.nickname).expect("invalid server in database")
         }))
     }
 }

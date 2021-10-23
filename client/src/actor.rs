@@ -3,7 +3,11 @@
 use downcast_rs::{impl_downcast, Downcast};
 use sequoia_openpgp::Cert;
 
+mod user;
+
 use crate::{seal::Sealed, server::Server};
+#[doc(inline)]
+pub use user::User;
 
 // GraphQL tags interfaces (traits in rust) with `__typename`
 #[typetag::serde(tag = "__typename")]

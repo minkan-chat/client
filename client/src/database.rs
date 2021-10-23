@@ -16,8 +16,10 @@ pub(crate) mod sqlite;
 /// # Note
 /// This trait is sealed to allow future extension
 pub trait Insert: Sealed {
+    /// The parent of this struct. Same as the `Parent` in the [`Get`] trait
+    type Parent;
     /// Inserts the instance of [`Self`] into the database.
-    async fn insert(&self) -> Result<()>;
+    async fn insert(&self, p: &Self::Parent) -> Result<()>;
 }
 
 #[async_trait]

@@ -2,7 +2,7 @@
 
 use url::Url;
 
-use crate::{error::ParseError, seal::Sealed, Application, Error, Result};
+use crate::{error::ParseError, seal::Sealed, Error, Result};
 
 #[non_exhaustive]
 #[derive(Debug)]
@@ -19,8 +19,6 @@ pub struct Server {
     pub(crate) api_endpoint: Url,
     /// The name an end-user can give to a server so they can easier identify it
     pub(crate) nickname: Option<String>,
-    /// The application the server can use to do interactions with the database
-    pub(crate) app: Application,
 }
 
 impl Sealed for Server {}
@@ -39,16 +37,11 @@ impl Server {
     /// # use minkan_client::server::Server;
     /// # use minkan_client::Application;
     /// # tokio_test::block_on( async {
-    /// let app = Application::new("sqlite::memory:").await.unwrap();
     /// let api_endpoint = Url::parse("https://example.com/graphql").unwrap();
-    /// let server = Server::new(api_endpoint, None, app).await.unwrap();
+    /// let server = Server::new(api_endpoint, None).await.unwrap();
     /// # })
     /// ```
-    pub async fn new(
-        api_endpoint: Url,
-        nickname: Option<String>,
-        app: Application,
-    ) -> Result<Self> {
+    pub async fn new(api_endpoint: Url, nickname: Option<String>) -> Result<Self> {
         // if the url has no host, it is invalid
         if !api_endpoint.has_host() {
             return Err(Error::ParseError(ParseError::UrlWithoutHost {
@@ -58,7 +51,6 @@ impl Server {
         Ok(Self {
             api_endpoint,
             nickname,
-            app,
         })
     }
 
@@ -73,9 +65,8 @@ impl Server {
     /// # use minkan_client::server::Server;
     /// # use minkan_client::Application;
     /// # tokio_test::block_on(async {
-    /// let app = Application::new("sqlite::memory:").await.unwrap();
     /// let api_endpoint = Url::parse("https://example.com/graphql").unwrap();
-    /// let server = Server::new(api_endpoint, None, app).await.unwrap();
+    /// let server = Server::new(api_endpoint, None).await.unwrap();
     /// assert_eq!(server.endpoint().path(), "/graphql");
     /// # })
     /// ```
@@ -93,10 +84,9 @@ impl Server {
     /// # use minkan_client::server::Server;
     /// # use minkan_client::Application;
     /// # tokio_test::block_on(async {
-    /// let app = Application::new("sqlite::memory:").await.unwrap();
     /// let api_endpoint = Url::parse("https://example.com/graphql").unwrap();
     /// let nickname = Some("my friend's minkan instance".to_string());
-    /// let server = Server::new(api_endpoint, nickname, app).await.unwrap();
+    /// let server = Server::new(api_endpoint, nickname).await.unwrap();
     /// assert!(server.nickname().is_some());
     /// # })
     pub fn nickname(&self) -> &Option<String> {
@@ -106,15 +96,10 @@ impl Server {
 
 impl Server {
     /// Shortcut for database operations so they dont have to use `new`
-    pub(crate) fn from_values(
-        endpoint: impl AsRef<str>,
-        nickname: Option<String>,
-        app: Application,
-    ) -> Result<Self> {
+    pub(crate) fn from_values(endpoint: impl AsRef<str>, nickname: Option<String>) -> Result<Self> {
         Ok(Self {
             api_endpoint: Url::parse(endpoint.as_ref()).map_err(|e| Error::ParseError(e.into()))?,
             nickname,
-            app,
         })
     }
 }
