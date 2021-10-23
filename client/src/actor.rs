@@ -5,20 +5,18 @@ use sequoia_openpgp::Cert;
 
 mod user;
 
-use crate::{seal::Sealed, server::Server};
+use crate::{seal::Sealed, server::Server, Node};
 #[doc(inline)]
 pub use user::User;
 
 // GraphQL tags interfaces (traits in rust) with `__typename`
 #[typetag::serde(tag = "__typename")]
 /// Everything that can take actions implements the [`Actor`] trait.
-pub trait Actor: Sealed + Downcast {
+pub trait Actor: Sealed + Downcast + Node {
     /// The openpgp certificate of an [`Actor`] from `sequoia-openpgp`
     fn certificate(&self) -> &Cert;
     /// The name of an [`Actor`] used to identify them
     fn name(&self) -> &str;
-    /// The origin server of the given [`Actor`]
-    fn server(&self) -> &Server;
 }
 // actor types support downcasting
 impl_downcast!(Actor);
