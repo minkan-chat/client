@@ -1,5 +1,6 @@
 //! The backend the client talks to
 
+use reqwest::Client;
 use url::Url;
 
 use crate::{error::ParseError, seal::Sealed, Error, Result};
@@ -19,6 +20,9 @@ pub struct Server {
     pub(crate) api_endpoint: Url,
     /// The name an end-user can give to a server so they can easier identify it
     pub(crate) nickname: Option<String>,
+    /// The [`Client`] used to communicate with the [`Server`] via the graphql
+    /// endpoint
+    pub(crate) client: Client,
 }
 
 impl Sealed for Server {}
@@ -48,9 +52,11 @@ impl Server {
                 url: api_endpoint,
             }));
         }
+        let client = Client::new();
         Ok(Self {
             api_endpoint,
             nickname,
+            client,
         })
     }
 
@@ -96,10 +102,16 @@ impl Server {
 
 impl Server {
     /// Shortcut for database operations so they dont have to use `new`
-    pub(crate) fn from_values(endpoint: impl AsRef<str>, nickname: Option<String>) -> Result<Self> {
+    pub(crate) fn from_values(
+        endpoint: impl AsRef<str>,
+        nickname: Option<String>,
+        client: Option<Client>,
+    ) -> Result<Self> {
+        let client = client.unwrap_or_else(Client::new);
         Ok(Self {
             api_endpoint: Url::parse(endpoint.as_ref()).map_err(|e| Error::ParseError(e.into()))?,
             nickname,
+            client,
         })
     }
 }
