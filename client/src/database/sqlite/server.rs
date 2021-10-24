@@ -41,7 +41,7 @@ impl Get for Server {
         )
         .fetch(app.pool())
         .map_ok(move |record| {
-            Server::from_values(record.endpoint, record.nickname)
+            Server::from_values(record.endpoint, record.nickname, None)
                 .expect("invalid server in database")
         })
         // TODO: map to correct error
@@ -62,7 +62,8 @@ impl Get for Server {
         // TODO: map to correct error
         .map_err(|_| Error::DatabaseError(DatabaseError::Other))?
         .map(|record| {
-            Self::from_values(record.endpoint, record.nickname).expect("invalid server in database")
+            Self::from_values(record.endpoint, record.nickname, None)
+                .expect("invalid server in database")
         }))
     }
 }
