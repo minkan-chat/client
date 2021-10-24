@@ -53,6 +53,12 @@ pub enum Error {
     /// Maps to the graphql api errors
     ApiError(#[from] ApiError),
     #[error(transparent)]
+    /// Errors that may occur while sending http requests to the api
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    /// Errors that are associated with OpenPGP
+    OpenPGPError(#[from] sequoia_openpgp::Error),
+    #[error(transparent)]
     /// Database operation errors
     DatabaseError(#[from] DatabaseError),
     #[error(transparent)]
