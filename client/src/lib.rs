@@ -10,6 +10,7 @@ pub mod actor;
 mod application;
 pub mod error;
 
+pub mod challenge;
 mod node;
 pub mod server;
 mod util;
