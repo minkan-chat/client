@@ -50,8 +50,12 @@ pub enum Error {
     /// Special case to represent errors during parsing of some data
     ParseError(#[from] ParseError),
     #[error(transparent)]
-    /// Maps to the graphql api errors
+    /// Maps to the expected graphql result type api errors
     ApiError(#[from] ApiError),
+    #[error("`errors`` section from api request: {0:#?}")]
+    /// Represents errors from the GraphQL API that are in the `errors` field
+    /// in the response mapping which aren't expected.
+    GraphQLError(Vec<graphql_client::Error>),
     #[error(transparent)]
     /// Errors that may occur while sending http requests to the api
     ReqwestError(#[from] reqwest::Error),
