@@ -70,5 +70,23 @@ where
     let response: Response<T::ResponseData> =
         serde_cbor::from_slice(&response.bytes().await?).map_err(|e| Error::Other(e.into()))?;
 
-    Ok(response.data.unwrap())
+    /*
+    A GraphQL response looks like the following:
+    {
+        "data": expected data (T::ResponseData),
+        "errors": Vec<errors as defined in the graphql spec>
+    }
+    graphql_client represents that with the Response<T::ResponseData> struct,
+    where both data and errors are Options
+    */
+    // if data is None, there must be at least one error (at least as defined in the graphql spec)
+    response.data.ok_or(()).or_else(|_| {
+        //
+        response
+            .errors
+            // no data and no errors violates the spec
+            .ok_or_else(|| anyhow::anyhow!("api did not return any data nor any errors").into())
+            // map in erros from Some into Err since we handle them in the Result type as GraphQL errors
+            .and_then(|errors| Err(Error::GraphQLError(errors)))
+    })
 }
