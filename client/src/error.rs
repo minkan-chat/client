@@ -34,7 +34,14 @@ macro_rules! api_errors {
                         $field: $field_type
                     ),*)?
                 }
-            ),*
+            ),*,
+            // "workaround" for #12
+            #[serde(other)]
+            #[error("not yet implemented ApiError")]
+            /// A fallback error to indicate that the error is not implemented (yet)
+            /// Because of a limitation from serde (see #12) you cannot access
+            /// `description` and `hint`
+            Other
         }
     };
 }
