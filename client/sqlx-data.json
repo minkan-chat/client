@@ -1,0 +1,61 @@
+{
+  "db": "SQLite",
+  "09909c6a0d31e8548b6709b2900416735b5651c4930659bb334fdd28a5b57d55": {
+    "query": "\n        SELECT api_endpoint AS endpoint, nickname FROM servers\n        WHERE api_endpoint = $1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "name": "endpoint",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "nickname",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        true
+      ]
+    }
+  },
+  "7c41905b00b9562519a884cca46a02f9ddb7327586cc72009e5c766c88d67616": {
+    "query": "\n        SELECT api_endpoint AS endpoint, nickname FROM servers\n        ",
+    "describe": {
+      "columns": [
+        {
+          "name": "endpoint",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "nickname",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        true
+      ]
+    }
+  },
+  "f460c9e58df7e0ba86a6fc16042f59c63597d389cd293394f4e13087c37cea78": {
+    "query": "\n            INSERT INTO servers(api_endpoint, nickname)\n            VALUES ($1, $2)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  }
+}

@@ -2,15 +2,25 @@
 //!
 //! For native builds, SQLite is used. For wasm builds, indexedDB is used.
 #![warn(missing_docs, missing_debug_implementations)]
-pub(crate) mod database;
+#![feature(generic_associated_types, type_alias_impl_trait)]
+pub mod database;
 pub(crate) mod seal;
 
+pub mod actor;
 mod application;
-mod error;
+pub mod error;
 
+pub mod challenge;
+mod node;
 pub mod server;
+mod util;
 
 #[doc(inline)]
 pub use application::Application;
 #[doc(inline)]
 pub use error::{Error, Result};
+#[doc(inline)]
+pub use node::Node;
+
+#[doc(inline)]
+pub(crate) use util::*;

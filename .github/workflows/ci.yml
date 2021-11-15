@@ -16,7 +16,7 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest]
-                rust-version: [stable, beta, nightly]
+                rust-version: [nightly]
                 checks:
                     - advisories
                     - bans licenses sources
@@ -46,7 +46,7 @@ jobs:
         strategy:
             matrix:
                 os: [windows-latest, ubuntu-latest, macos-latest]
-                rust-version: [stable, beta, nightly]
+                rust-version: [nightly]
         name: Build with ${{ matrix.rust-version }} on ${{ matrix.os }}
         runs-on: ${{ matrix.os }}
 
@@ -88,7 +88,7 @@ jobs:
     test:
         strategy:
             matrix:
-                rust-version: [stable, beta, nightly]
+                rust-version: [nightly]
                 os: [windows-latest, ubuntu-latest, macos-latest]
         name: Test with rust ${{ matrix.rust-version }} on ${{ matrix.os }}
         runs-on: ${{ matrix.os }}

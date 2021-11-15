@@ -1,7 +1,7 @@
 [package]
 name = "minkan-client"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 authors = [
     "Erik Tesar <erik@erik-tesar.com>"
 ]
@@ -22,10 +22,27 @@ serde = { version = "1.0.130", features = ["derive"]}
 url = "2.2.2"
 async-stream = "0.3.2"
 futures = "0.3"
-directories = "4.0.1"
+downcast-rs = "1.2.0"
+typetag = "0.1.7"
+sequoia-openpgp = { version = "1.5.0", default-features = false, features = [
+    "crypto-rust",
+    "allow-experimental-crypto",
+    "allow-variable-time-crypto",
+    "compression"
+]}
+uuid = { version = "0.8.2", features = ["serde"] }
+bytes = { version = "1.1.0", features = ["serde"] }
+graphql_client = { version = "0.10.0", features = ["reqwest"]}
+# I'd really like to use ciborium since serde_cbor is no longer maintained,
+# but it seems like they aren't maintaing ciborium either.
+serde_cbor = "0.11.2"
+
+[dev-dependencies]
+# used to test async code
+tokio-test = "0.4.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls"]}
+sqlx = { version = "0.5.9", features = ["sqlite", "runtime-tokio-native-tls", "offline"]}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3.55"
